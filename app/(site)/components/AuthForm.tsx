@@ -2,19 +2,27 @@
 
 import Button from "@/app/components/Button";
 import Input from "@/app/components/inputs/Input";
-import React, { useCallback, useEffect, useState } from "react";
-import { FieldValues, SubmitHandler, useForm } from "react-hook-form";
-import AuthSocialButton from "./AuthSocialButton";
-import { BsGithub, BsGoogle } from "react-icons/bs";
 import axios from "axios";
+import { signIn, useSession } from "next-auth/react";
+import { useCallback, useEffect, useState } from "react";
+import { FieldValues, SubmitHandler, useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-import { signIn } from "next-auth/react";
+import { BsGithub, BsGoogle } from "react-icons/bs";
+import AuthSocialButton from "./AuthSocialButton";
+import { useRouter } from "next/navigation";
 type Variant = "LOGIN" | "REGISTER";
 
 const AuthForm = () => {
   const [variant, setVariant] = useState<Variant>("LOGIN");
   const [isLoading, setIsLoading] = useState(false);
+  const { data: session, status } = useSession();
+  const router = useRouter();
 
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push("/users");
+    }
+  }, [status, router]);
   const toggleVariant = useCallback(() => {
     if (variant === "LOGIN") setVariant("REGISTER");
     else setVariant("LOGIN");
@@ -37,7 +45,10 @@ const AuthForm = () => {
     if (variant === "REGISTER") {
       axios
         .post(`/api/register`, data)
-        .then(() => toast.success("Registered Successfully"))
+        .then(() => {
+          toast.success("Registered Successfully");
+          signIn('credentials',data)
+        })
         .catch(() => toast.error("Something went wrong"))
         .finally(() => setIsLoading(false));
     }
@@ -55,7 +66,7 @@ const AuthForm = () => {
     signIn(action, { redirect: false })
       .then((callback) => {
         if (callback?.error) toast.error("Invalid credentials");
-        if (callback?.ok) toast.success(`Logged in with ${action}`);
+        if (callback?.ok) toast.success(`Logged in`);
       })
       .finally(() => setIsLoading(false));
   };
@@ -121,10 +132,12 @@ const AuthForm = () => {
           </div>
           <div className="flex gap-2 justify-center text-sm mt-6 px-2 text-gray-500">
             <div>
-              {variant ? "New to Messenger?" : "Already Have an account?"}
+              {variant === "LOGIN"
+                ? "New to Messenger?"
+                : "Already Have an account?"}
             </div>
             <div onClick={toggleVariant} className="underline cursor-pointer">
-              {variant ? "Create an account" : "Login"}
+              {variant === "LOGIN" ? "Create an account" : "Login"}
             </div>
           </div>
         </div>
