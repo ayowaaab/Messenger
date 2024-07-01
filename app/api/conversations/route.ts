@@ -1,6 +1,6 @@
 import getCurrentUser from "@/app/actions/getCurrentUser";
-import { NextResponse } from "next/server";
 import prisma from "@/app/libs/prismadb";
+import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
@@ -28,7 +28,35 @@ export async function POST(request: Request) {
         },
         include: { users: true },
       });
+
+      return NextResponse.json(newConversation);
     }
+    const existingConversations = await prisma.conversation.findMany({
+      where: {
+        OR: [
+          {
+            userIds: { equals: [userId, currentUser.id] },
+          },
+          {
+            userIds: { equals: [currentUser.id, userId] },
+          },
+        ],
+      },
+    });
+
+    const singleConversation = existingConversations[0];
+    if (singleConversation) return NextResponse.json(singleConversation);
+
+    const newConversation = await prisma.conversation.create({
+      data: {
+        users: {
+          connect: [{ id: currentUser.id }, { id: userId }],
+        },
+      },
+      include: { users: true },
+    });
+    return NextResponse.json(newConversation);
+    
   } catch (error) {
     return new NextResponse("Internal Server Error", { status: 500 });
   }
