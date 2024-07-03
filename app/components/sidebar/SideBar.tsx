@@ -11,7 +11,6 @@ const SideBar = async({ children }: { children: React.ReactNode }) => {
      <MobileFooter />
       <main className="lg:pl-20 h-full">
         {children}
-
       </main>
     </div>
   );
